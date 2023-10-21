@@ -41,22 +41,23 @@ def include_files(token_map: Tokens):
                                 if inout.is_file(path):
                                     working_path = path
                             else:
+                                main_test_path = "/".join(token_map.main_dir.split("/")[:-1])+"/"+path
                                 if "/" in path:
                                     test_path = "/".join(token_map.main_dir.split("/")[:-1])+"/"+path
                                     if inout.is_file(test_path):
                                         working_path = test_path
                                     elif inout.is_file(main_test_path):
-                                        working_path = path
+                                        working_path = main_test_path
                                 else:
                                     if inout.is_file(main_test_path):
-                                        working_path = path
+                                        working_path = main_test_path
 
                         if working_path == None:
                             # TODO: proper error message
                             raise Exception("Error: Include file not found: "+str(path))
 
                         cppcode = inout.read_from_file(working_path)
-                        sub_token_map = Tokens(Unparsed(cppcode),path)
+                        sub_token_map = Tokens(Unparsed(cppcode),working_path,token_map.main_dir)
                         tokenizer.purify(sub_token_map)
                         solve(sub_token_map)
 
