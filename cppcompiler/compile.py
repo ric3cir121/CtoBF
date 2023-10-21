@@ -1,11 +1,11 @@
 import cppcompiler.tokenizer as tokenizer
 import cppcompiler.process as process
 import cppcompiler.transform as transform
-import cppcompiler.io as io
+import cppcompiler.inout as inout
 from cppcompiler.objs import *
 
 def solve(main: str):
-    cppcode = io.read_from_file(main)
+    cppcode = inout.read_from_file(main)
     token_map = Tokens([Unparsed("#include \"bfcomp\"\n"),Unparsed(cppcode)],main)
     token_map.patch()
     tokenizer.solve(token_map)

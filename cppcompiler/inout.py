@@ -13,3 +13,9 @@ def write_to_file(path: str,content: str) -> None:
 
 def is_file(path):
     return os.path.isfile(path)
+
+def is_dir(path):
+    return os.path.isdir(path)
+
+def make_dir(path):
+    return os.mkdir(path)

@@ -1,4 +1,4 @@
-import cppcompiler.io as io
+import cppcompiler.inout as inout
 import cppcompiler.tokenizer as tokenizer
 from cppcompiler.objs import *
 
@@ -38,24 +38,24 @@ def include_files(token_map: Tokens):
 
                         if len(path) > 0:
                             if path[0] == "/":
-                                if io.is_file(path):
+                                if inout.is_file(path):
                                     working_path = path
                             else:
                                 if "/" in path:
                                     test_path = "/".join(token_map.main_dir.split("/")[:-1])+"/"+path
-                                    if io.is_file(test_path):
+                                    if inout.is_file(test_path):
                                         working_path = test_path
-                                    elif io.is_file(path):
+                                    elif inout.is_file(main_test_path):
                                         working_path = path
                                 else:
-                                    if io.is_file(path):
+                                    if inout.is_file(main_test_path):
                                         working_path = path
 
                         if working_path == None:
                             # TODO: proper error message
                             raise Exception("Error: Include file not found: "+str(path))
 
-                        cppcode = io.read_from_file(path)
+                        cppcode = inout.read_from_file(working_path)
                         sub_token_map = Tokens(Unparsed(cppcode),path)
                         tokenizer.purify(sub_token_map)
                         solve(sub_token_map)
