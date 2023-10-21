@@ -160,6 +160,7 @@ Token = Unparsed|String|Operator|Bracket|Split|Divider|Name
 
 class Tokens:
     tokens: list[Token] = []
+    dir: str = ""
     main_dir: str = ""
 
     def patch(self):
@@ -184,12 +185,17 @@ class Tokens:
             i += 1
         pass
 
-    def __init__(self,tokens: list[Token] | Token, main_dir: str =""):
+    def __init__(self,tokens: list[Token] | Token, dir: str ="", main_dir: str =None):
         if isinstance(tokens,list):
             self.tokens = tokens
         else:
             self.tokens = [tokens]
-        self.main_dir = main_dir
+        self.dir = dir
+        if main_dir is None:
+            self.main_dir = dir
+        else:
+            self.main_dir = main_dir
+
 
     def __str__(self):
         return f"Tokens({self.tokens.__repr__()})"
