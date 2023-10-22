@@ -119,6 +119,38 @@ def split_token(string: list[Token],criteria: list[str]|str,replace: list[Token]
 
 # Functions
 
+def uncomment(token_map: Tokens):
+    tokens = token_map.tokens
+    res = []
+    is_long_comment,is_short_comment = False,False
+    for token in tokens:
+        if isinstance(token,Unparsed):
+            string = token.string
+            split = split_str([string],["/*","*/","//","\n"])
+            read = ""
+            for i in split:
+                if is_short_comment:
+                    if i == "\n":
+                        is_short_comment = False
+                        res.append(Unparsed(read))
+                        res.append(Divider())
+                        read = ""
+                elif is_long_comment:
+                    if i == "*/":
+                        is_long_comment = False
+                        res.append(Unparsed(read))
+                        res.append(Divider())
+                        read = ""
+                else:
+                    if i == "//": is_short_comment = True
+                    elif i == "/*": is_long_comment = True
+                    else:
+                        read += i
+            if read != "":
+                res.append(Unparsed(read))
+    token_map.tokens = res
+    token_map.patch()
+
 def unstring(token_map: Tokens):
     tokens = token_map.tokens
     res = []
@@ -162,42 +194,6 @@ def unstring(token_map: Tokens):
             else:
                 # TODO: proper error message
                 raise Exception("Error: String reached end of file")
-    token_map.tokens = res
-    token_map.patch()
-
-def uncomment(token_map: Tokens):
-    tokens = token_map.tokens
-    res = []
-    is_long_comment,is_short_comment = False,False
-    for token in tokens:
-        if isinstance(token,Unparsed):
-            string = token.string
-            split = split_str([string],["/*","*/","//","\n"])
-            read = ""
-            for i in split:
-                if is_short_comment:
-                    if i == "\n":
-                        is_short_comment = False
-                        res.append(Unparsed(read))
-                        res.append(Divider())
-                        read = ""
-                elif is_long_comment:
-                    if i == "*/":
-                        is_long_comment = False
-                        res.append(Unparsed(read))
-                        res.append(Divider())
-                        read = ""
-                else:
-                    if i == "//": is_short_comment = True
-                    elif i == "/*": is_long_comment = True
-                    else:
-                        read += i
-            if read != "":
-                res.append(Unparsed(read))
-
-        if isinstance(token,String):
-            if not (is_long_comment or is_short_comment):
-                res.append(token)
     token_map.tokens = res
     token_map.patch()
 
@@ -292,8 +288,8 @@ def purify(token_map: Tokens):
     # Function purify does unstringing and uncommenting
     # It will divide strings from the rest of the code
     # and will remove comments from it
-    unstring(token_map)
     uncomment(token_map)
+    unstring(token_map)
 
 def solve(token_map: Tokens):
     purify(token_map)
