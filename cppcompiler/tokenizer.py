@@ -148,6 +148,11 @@ def uncomment(token_map: Tokens):
                         read += i
             if read != "":
                 res.append(Unparsed(read))
+    
+    if is_long_comment:
+        # TODO: proper internal error message
+        raise Exception("Error: Long Comment was not closed")
+
     token_map.tokens = res
     token_map.patch()
 
