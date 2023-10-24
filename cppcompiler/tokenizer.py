@@ -73,24 +73,38 @@ value_types = [
 
 # Utils Functions
 
-def split_str(string: list[str]|str,criteria: list[str]|str):
-    if isinstance(criteria,list):
-        res = string
-        for i in criteria:
-            res = split_str(res,i)
-        return res
-    else:
-        res = []
-        for i in string:
-            string_split = i.split(criteria)
-            split = []
-            for i in range(len(string_split)):
-                if i != 0 and criteria != "": split.append(criteria)
-                if string_split[i] != "": split.append(string_split[i])
-            res += split
-        return res
+def split_str(strings: list[str]|str,criteria: list[str]|str):
+    if isinstance(criteria,str): criteria = [criteria]
+    if isinstance(strings,str): strings = [strings]
+    criteria.sort(reverse=True,key=lambda x: len(x)) # sorted by longest string to shortest one
+
+    i = 0
+    while i != len(strings):
+        string = strings[i]
+        j = 0
+        while j != len(string):
+            string = strings[i]
+            for k in criteria:
+                if k == string[j:j+len(k)]:
+                    if j == 0:
+                        strings = strings[:i]+[string[j:j+len(k)],string[j+len(k):]]+strings[i+1:]
+                        i += 1
+                        j = -1
+                        break
+                    else:
+                        split = [string[:j],string[j:j+len(k)],string[j+len(k):]]
+                        strings = strings[:i]+split+strings[i+1:]
+                        i += 2
+                        j = -1
+                        break
+            j += 1
+        i += 1
+    return strings
 
 def split_token(string: list[Token],criteria: list[str]|str,replace: list[Token]|Token):
+    # FIXME: split the strings in a fashion similar to split_str()
+    # The method used here is not correct
+
     if isinstance(criteria,list) and isinstance(replace,list):
         res = string
         for i in range(len(criteria)):
@@ -119,14 +133,19 @@ def split_token(string: list[Token],criteria: list[str]|str,replace: list[Token]
 
 # Functions
 
-def uncomment(token_map: Tokens):
+def unparse(token_map: Tokens):
+    token_map.patch()
     tokens = token_map.tokens
     res = []
-    is_long_comment,is_short_comment = False,False
+    is_long_comment,is_short_comment,is_string = False,False,False
+    is_single_escape,is_include_str = False,False
+    delimiters = "\"'"
+    delimiter,escape = "",""
     for token in tokens:
         if isinstance(token,Unparsed):
             string = token.string
             split = split_str([string],["/*","*/","//","\n"])
+            print(split)
             read = ""
             for i in split:
                 if is_short_comment:
@@ -142,65 +161,50 @@ def uncomment(token_map: Tokens):
                         res.append(Divider())
                         read = ""
                 else:
-                    if i == "//": is_short_comment = True
-                    elif i == "/*": is_long_comment = True
-                    else:
-                        read += i
+                    if not is_string:
+                        if i == "//": is_short_comment = True
+                        elif i == "/*": is_long_comment = True
+                    if not (is_short_comment or is_long_comment):
+                        for char in i:
+                            if not is_string:
+                                if char in delimiters and not (is_short_comment or is_long_comment):
+                                    is_string = True
+                                    delimiter = char
+                                    is_include_str = read.rstrip(" ").split("\n")[-1] == "#include"
+                                    res.append(Unparsed(read))
+                                    read = ""
+                                else:
+                                    read += char
+                            else:
+                                # TODO: missing all escaping rules for a string
+                                if char == delimiter and not is_single_escape:
+                                    is_string = False
+                                    res.append(String(read,delimiter))
+                                    read = ""
+                                else:
+                                    if char in "\\\n" and is_include_str:
+                                        # TODO: proper error message
+                                        raise Exception("Error: Include errors detected")
+                                    if not is_single_escape:
+                                        if char == "\\":
+                                            is_single_escape = True
+                                    else:
+                                        is_single_escape = False
+                                    read += char
+
             if read != "":
                 res.append(Unparsed(read))
     
     if is_long_comment:
         # TODO: proper internal error message
         raise Exception("Error: Long Comment was not closed")
+    if is_string:
+        # TODO: proper internal error message
+        raise Exception("Error: String was not closed")
 
     token_map.tokens = res
     token_map.patch()
-
-def unstring(token_map: Tokens):
-    tokens = token_map.tokens
-    res = []
-    for token in tokens:
-        if isinstance(token,Unparsed):
-            string = token.string
-            in_string,in_single_escape,is_include_str = False,False,False
-            delimiters = "\"'"
-            delimiter,escape = "",""
-            read = ""
-            for char in string:
-                if not in_string:
-                    if char in delimiters:
-                        in_string = True
-                        delimiter = char
-                        is_include_str = read.rstrip(" ").split("\n")[-1] == "#include"
-                        res.append(Unparsed(read))
-                        read = ""
-                    else:
-                        read += char
-                else:
-                    # TODO: missing all escaping rules for a string
-                    if char == delimiter and not in_single_escape:
-                        in_string = False
-                        res.append(String(read,delimiter))
-                        read = ""
-                    else:
-                        if char in "\\\n" and is_include_str:
-                            # TODO: proper error message
-                            raise Exception("Error: Include errors detected")
-                        if not in_single_escape:
-                            if char == "\\":
-                                in_single_escape = True
-                        else:
-                            in_single_escape = False
-                        read += char
-
-            if not in_string:
-                res.append(Unparsed(read))
-                read = ""
-            else:
-                # TODO: proper error message
-                raise Exception("Error: String reached end of file")
-    token_map.tokens = res
-    token_map.patch()
+    print("res",token_map.tokens)
 
 def tokenize(token_map: Tokens):
     # split different tokens
@@ -293,8 +297,7 @@ def purify(token_map: Tokens):
     # Function purify does unstringing and uncommenting
     # It will divide strings from the rest of the code
     # and will remove comments from it
-    uncomment(token_map)
-    unstring(token_map)
+    unparse(token_map)
 
 def solve(token_map: Tokens):
     purify(token_map)
